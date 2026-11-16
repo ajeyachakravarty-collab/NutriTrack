@@ -1599,7 +1599,7 @@
       if (savedKey) document.getElementById('geminiKeyInput').value = savedKey;
     } catch (e) {}
 
-    document.getElementById('geminiKeyInput').addEventListener('change', (e) => {
+    document.getElementById('geminiKeyInput').addEventListener('input', (e) => {
       try { localStorage.setItem('nutritrack_gemini_key', e.target.value.trim()); } catch (err) {}
     });
 
@@ -1730,7 +1730,7 @@
     async function analyzeFoodWithGemini(dataUrl, apiKey, hintText) {
       const base64Data = dataUrl.split(',')[1];
       const mimeType = dataUrl.split(';')[0].split(':')[1] || 'image/jpeg';
-      const prompt = `Identify the food items in this meal photo${hintText ? ' (user hint: ' + hintText + ')' : ''}. Return ONLY a valid JSON array of objects with keys: name (string), servingLabel (string), servings (number, default 1), kcal (number per 1 serving), p (protein grams per 1 serving), c (carbs grams per 1 serving), f (fat grams per 1 serving).`;
+      const prompt = `Identify the food items in this meal photo${hintText ? ' (user hint: ' + hintText + ')' : ''}. Return a JSON array of objects with keys: name (string), servingLabel (string), servings (number, default 1), kcal (number per 1 serving), p (protein grams per 1 serving), c (carbs grams per 1 serving), f (fat grams per 1 serving).`;
       const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1740,14 +1740,25 @@
               { text: prompt },
               { inline_data: { mime_type: mimeType, data: base64Data } }
             ]
-          }]
+          }],
+          generationConfig: {
+            responseMimeType: 'application/json'
+          }
         })
       });
-      if (!res.ok) throw new Error('API request failed');
+      if (!res.ok) {
+        let errMsg = `HTTP ${res.status}`;
+        try {
+          const errData = await res.json();
+          if (errData?.error?.message) errMsg = errData.error.message;
+        } catch (e) {}
+        throw new Error(errMsg);
+      }
       const json = await res.json();
       const text = json?.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
       const cleaned = text.replace(/```json|```/g, '').trim();
-      const parsed = JSON.parse(cleaned);
+      const arrMatch = cleaned.match(/\[[\s\S]*\]/);
+      const parsed = JSON.parse(arrMatch ? arrMatch[0] : cleaned);
       if (!Array.isArray(parsed) || parsed.length === 0) throw new Error('No items parsed');
       return parsed.map(item => ({
         foodId: 'snap_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
@@ -1853,7 +1864,7 @@
         snapDetectedItems = offlineSmartScan(hint, snapFileName, rgb);
         document.getElementById('snapResultsBox').classList.remove('hidden');
         renderSnapDetectedList();
-        statusEl.textContent = 'AI Vision unavailable—showing Smart Plate Scanner matches instead.';
+        statusEl.textContent = `AI Vision error (${err.message || 'failed'})—showing Smart Plate Scanner matches instead.`;
       } finally {
         btn.disabled = false;
         btn.textContent = '✨ Scan & Add Values';
