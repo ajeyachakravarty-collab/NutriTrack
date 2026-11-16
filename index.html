@@ -1731,30 +1731,36 @@
       const base64Data = dataUrl.split(',')[1];
       const mimeType = dataUrl.split(';')[0].split(':')[1] || 'image/jpeg';
       const prompt = `Identify the food items in this meal photo${hintText ? ' (user hint: ' + hintText + ')' : ''}. Return a JSON array of objects with keys: name (string), servingLabel (string), servings (number, default 1), kcal (number per 1 serving), p (protein grams per 1 serving), c (carbs grams per 1 serving), f (fat grams per 1 serving).`;
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${encodeURIComponent(apiKey)}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{
-            parts: [
-              { text: prompt },
-              { inline_data: { mime_type: mimeType, data: base64Data } }
-            ]
-          }],
-          generationConfig: {
-            responseMimeType: 'application/json'
-          }
-        })
-      });
-      if (!res.ok) {
-        let errMsg = `HTTP ${res.status}`;
+      const models = ['gemini-3.8-flash', 'gemini-3.6-flash', 'gemini-3.5-flash-lite', 'gemini-3-flash-preview'];
+      let json = null;
+      let lastErr = 'API request failed';
+      for (const model of models) {
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{
+              parts: [
+                { text: prompt },
+                { inline_data: { mime_type: mimeType, data: base64Data } }
+              ]
+            }],
+            generationConfig: {
+              responseMimeType: 'application/json'
+            }
+          })
+        });
+        if (res.ok) {
+          json = await res.json();
+          break;
+        }
+        lastErr = `HTTP ${res.status}`;
         try {
           const errData = await res.json();
-          if (errData?.error?.message) errMsg = errData.error.message;
+          if (errData?.error?.message) lastErr = errData.error.message;
         } catch (e) {}
-        throw new Error(errMsg);
       }
-      const json = await res.json();
+      if (!json) throw new Error(lastErr);
       const text = json?.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
       const cleaned = text.replace(/```json|```/g, '').trim();
       const arrMatch = cleaned.match(/\[[\s\S]*\]/);
