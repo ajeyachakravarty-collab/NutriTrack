@@ -534,6 +534,14 @@
 
       <!-- Snap Photo Pane -->
       <div id="modalSnapPane" class="hidden p-5 flex-1 overflow-y-auto space-y-4 text-sm">
+        <div class="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-xl" id="snapModeToggle">
+          <button type="button" data-scan-mode="plate" class="snap-mode-btn py-1.5 px-2.5 rounded-lg text-xs font-semibold bg-white text-emerald-700 shadow-sm transition">
+            🍽️ Meal Plate
+          </button>
+          <button type="button" data-scan-mode="label" class="snap-mode-btn py-1.5 px-2.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition">
+            🏷️ Nutrition Label
+          </button>
+        </div>
         <div class="bg-slate-50 border-2 border-dashed border-slate-300 rounded-2xl p-4 text-center space-y-3">
           <input type="file" id="snapFileInput" accept="image/*" capture="environment" class="hidden" />
           <canvas id="snapCanvas" class="hidden"></canvas>
@@ -1736,6 +1744,26 @@
     let snapImageDataUrl = null;
     let snapFileName = '';
     let snapDetectedItems = [];
+    let snapScanMode = 'plate';
+
+    function setSnapScanMode(mode) {
+      snapScanMode = mode === 'label' ? 'label' : 'plate';
+      document.querySelectorAll('.snap-mode-btn').forEach(btn => {
+        const active = btn.dataset.scanMode === snapScanMode;
+        btn.className = active
+          ? 'snap-mode-btn py-1.5 px-2.5 rounded-lg text-xs font-semibold bg-white text-emerald-700 shadow-sm transition'
+          : 'snap-mode-btn py-1.5 px-2.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition';
+      });
+      document.getElementById('snapHintInput').placeholder = snapScanMode === 'label'
+        ? 'Optional product name (e.g., Protein Bar, Masala Oats)...'
+        : 'e.g., masala dosa, 2 roti + palak paneer, chicken biryani...';
+      document.getElementById('snapCameraStatus').textContent = snapScanMode === 'label'
+        ? 'Snap the Nutrition Facts table on the back of a packet to read exact kcal & macros.'
+        : 'Snap a plate of food or upload a meal photo to auto-calculate calories & macros.';
+    }
+    document.querySelectorAll('.snap-mode-btn').forEach(btn => {
+      btn.addEventListener('click', () => setSnapScanMode(btn.dataset.scanMode));
+    });
 
     try {
       const savedKey = localStorage.getItem('nutritrack_gemini_key');
@@ -1898,10 +1926,12 @@
       }));
     }
 
-    async function analyzeFoodWithGemini(dataUrl, apiKey, hintText) {
+    async function analyzeFoodWithGemini(dataUrl, apiKey, hintText, scanMode = 'plate') {
       const base64Data = dataUrl.split(',')[1];
       const mimeType = dataUrl.split(';')[0].split(':')[1] || 'image/jpeg';
-      const prompt = `Identify the food items in this meal photo${hintText ? ' (user hint: ' + hintText + ')' : ''}. Return a JSON array of objects with keys: name (string), servingLabel (string), servings (number, default 1), kcal (number per 1 serving), p (protein grams per 1 serving), c (carbs grams per 1 serving), f (fat grams per 1 serving).`;
+      const prompt = scanMode === 'label'
+        ? `Read the printed Nutrition Facts / Back-of-Pack label in this photo${hintText ? ' (product name/hint: ' + hintText + ')' : ''}. Extract the exact product name and per-serving (or per-100g if serving size is not listed) values. Return a JSON array with 1 object having keys: name (string), servingLabel (string, e.g. "1 pack (30g)" or "100g"), servings (number, default 1), kcal (number), p (protein grams), c (carbohydrates grams), f (fat grams).`
+        : `Identify the food items in this meal photo${hintText ? ' (user hint: ' + hintText + ')' : ''}. Return a JSON array of objects with keys: name (string), servingLabel (string), servings (number, default 1), kcal (number per 1 serving), p (protein grams per 1 serving), c (carbs grams per 1 serving), f (fat grams per 1 serving).`;
       const models = ['gemini-3.6-flash', 'gemini-3.5-flash-lite', 'gemini-3.8-flash', 'gemini-3-flash-preview'];
       const statusEl = document.getElementById('snapCameraStatus');
       let json = null;
@@ -1962,28 +1992,56 @@
 
     function renderSnapDetectedList() {
       const list = document.getElementById('snapDetectedList');
+      const portionPills = [0.25, 0.5, 1, 1.5, 2];
       list.innerHTML = snapDetectedItems.map((item, idx) => `
-        <div class="p-3 rounded-xl border border-slate-200 bg-white flex flex-wrap items-center justify-between gap-2">
-          <div class="min-w-0 flex-1">
-            <div class="font-semibold text-xs text-slate-900 truncate">${escapeHtml(item.name)}</div>
-            <div class="text-[11px] text-slate-500">${escapeHtml(item.servingLabel)} · <strong>${Math.round(item.kcal * item.servings)} kcal</strong> (P ${Math.round(item.p * item.servings * 10)/10}g · C ${Math.round(item.c * item.servings * 10)/10}g · F ${Math.round(item.f * item.servings * 10)/10}g)</div>
+        <div class="p-3 rounded-xl border border-slate-200 bg-white space-y-2">
+          <div class="flex items-start justify-between gap-2">
+            <div class="min-w-0 flex-1">
+              <div class="font-semibold text-xs text-slate-900 break-words">${escapeHtml(item.name)}</div>
+              <div class="text-[11px] text-slate-500 mt-0.5">${escapeHtml(item.servingLabel)} · <strong class="text-slate-800">${Math.round(item.kcal * item.servings)} kcal</strong> (P ${Math.round(item.p * item.servings * 10)/10}g · C ${Math.round(item.c * item.servings * 10)/10}g · F ${Math.round(item.f * item.servings * 10)/10}g)</div>
+            </div>
+            <div class="flex items-center gap-1 shrink-0">
+              <button type="button" data-snap-save="${idx}" title="Save to My Custom Foods" class="px-2 py-1 rounded-lg border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-[11px] font-semibold">💾 Save</button>
+              <button type="button" data-snap-remove="${idx}" class="text-slate-400 hover:text-rose-600 px-1.5 font-bold">&times;</button>
+            </div>
           </div>
-          <div class="flex items-center gap-1.5">
-            <select data-snap-qty="${idx}" class="text-xs border border-slate-200 rounded-lg px-2 py-1 bg-slate-50 font-semibold">
-              <option value="0.5" ${item.servings === 0.5 ? 'selected' : ''}>0.5×</option>
-              <option value="1" ${item.servings === 1 ? 'selected' : ''}>1×</option>
-              <option value="1.5" ${item.servings === 1.5 ? 'selected' : ''}>1.5×</option>
-              <option value="2" ${item.servings === 2 ? 'selected' : ''}>2×</option>
-            </select>
-            <button type="button" data-snap-remove="${idx}" class="text-slate-400 hover:text-rose-600 px-1.5 font-bold">&times;</button>
+          <div class="flex flex-wrap items-center gap-1.5">
+            <span class="text-[11px] font-medium text-slate-400 mr-0.5">Portion:</span>
+            ${portionPills.map(p => `
+              <button type="button" data-snap-pill="${idx}" data-pill-val="${p}" class="px-2.5 py-1 rounded-full text-[11px] font-semibold border transition ${
+                item.servings === p
+                  ? 'bg-emerald-600 text-white border-emerald-600'
+                  : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+              }">${p}×</button>
+            `).join('')}
           </div>
         </div>
       `).join('');
 
-      list.querySelectorAll('[data-snap-qty]').forEach(sel => {
-        sel.addEventListener('change', () => {
-          snapDetectedItems[Number(sel.dataset.snapQty)].servings = Number(sel.value) || 1;
+      list.querySelectorAll('[data-snap-pill]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          snapDetectedItems[Number(btn.dataset.snapPill)].servings = Number(btn.dataset.pillVal) || 1;
           renderSnapDetectedList();
+        });
+      });
+      list.querySelectorAll('[data-snap-save]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const item = snapDetectedItems[Number(btn.dataset.snapSave)];
+          if (!item) return;
+          const newFood = {
+            id: 'cf_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5),
+            name: item.name,
+            category: 'Custom',
+            serving: item.servingLabel,
+            kcal: Math.round(item.kcal),
+            p: item.p,
+            c: item.c,
+            f: item.f,
+            emoji: snapScanMode === 'label' ? '🏷️' : '🥗'
+          };
+          state.customFoods.unshift(newFood);
+          saveState();
+          showToast(`Saved "${item.name}" to My Custom Foods!`);
         });
       });
       list.querySelectorAll('[data-snap-remove]').forEach(btn => {
@@ -2033,7 +2091,7 @@
       try {
         if (apiKey) {
           statusEl.textContent = 'Analyzing photo with Gemini AI Vision...';
-          snapDetectedItems = await analyzeFoodWithGemini(snapImageDataUrl, apiKey, hint);
+          snapDetectedItems = await analyzeFoodWithGemini(snapImageDataUrl, apiKey, hint, snapScanMode);
         } else {
           statusEl.textContent = 'Scanning plate with offline Smart Plate Scanner...';
           const rgb = await sampleImageColorProfile(snapImageDataUrl);
