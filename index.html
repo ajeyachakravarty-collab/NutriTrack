@@ -1367,10 +1367,9 @@
     function renderAnalyticsDayDetails(dateStr) {
       const dObj = new Date(dateStr + 'T00:00:00');
       const prettyDate = dObj.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' });
+      const t = getDayTotals(dateStr);
       document.getElementById('macroSplitTitle').textContent = `Macro Calorie Split — ${prettyDate}`;
       document.getElementById('analyticsMealTitle').textContent = `Meal & Burn Breakdown (${prettyDate} · Burned: ${t.burned} kcal)`;
-
-      const t = getDayTotals(dateStr);
       const pCal = Math.round(t.p * 4);
       const cCal = Math.round(t.c * 4);
       const fCal = Math.round(t.f * 9);
@@ -1447,6 +1446,7 @@
       if (!dateKeys.includes(analyticsDate)) analyticsDate = state.selectedDate;
 
       const barColors = dateKeys.map(ds => ds === analyticsDate ? '#047857' : '#34d399');
+      const burnBarColors = dateKeys.map(ds => ds === analyticsDate ? '#d97706' : '#fbbf24');
 
       const wCtx = document.getElementById('weeklyChart').getContext('2d');
       if (weeklyChartInstance) weeklyChartInstance.destroy();
@@ -1464,7 +1464,7 @@
             {
               label: 'Calories Burned',
               data: burnedSeries,
-              backgroundColor: '#f59e0b',
+              backgroundColor: burnBarColors,
               borderRadius: 6
             },
             {
