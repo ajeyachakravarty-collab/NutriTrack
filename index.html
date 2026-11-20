@@ -836,6 +836,14 @@
         waterGlasses: 8,
         includeExerciseInRemaining: true
       },
+      tdeeProfile: {
+        sex: 'male',
+        age: 35,
+        height: 178,
+        weight: 74,
+        activity: '1.55',
+        goal: '-500'
+      },
       logsByDate: {},
       waterByDate: {},
       workoutsByDate: {},
@@ -857,6 +865,7 @@
           ...JSON.parse(JSON.stringify(defaultState)),
           ...parsed,
           goals: { ...defaultState.goals, ...(parsed.goals || {}) },
+          tdeeProfile: { ...defaultState.tdeeProfile, ...(parsed.tdeeProfile || {}) },
           activeTab: 'today',
           selectedDate: getLocalDateStr()
         };
@@ -869,6 +878,7 @@
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify({
           goals: state.goals,
+          tdeeProfile: state.tdeeProfile,
           logsByDate: state.logsByDate,
           waterByDate: state.waterByDate,
           workoutsByDate: state.workoutsByDate,
@@ -1487,6 +1497,13 @@
     }
 
     function syncGoalsUI() {
+      const tp = state.tdeeProfile || defaultState.tdeeProfile;
+      document.getElementById('tdeeSex').value = tp.sex;
+      document.getElementById('tdeeAge').value = tp.age;
+      document.getElementById('tdeeHeight').value = tp.height;
+      document.getElementById('tdeeWeight').value = tp.weight;
+      document.getElementById('tdeeActivity').value = String(tp.activity);
+      document.getElementById('tdeeGoal').value = String(tp.goal);
       document.getElementById('goalCaloriesInput').value = state.goals.calories;
       document.getElementById('goalWaterInput').value = state.goals.waterGlasses;
       document.getElementById('goalProteinInput').value = state.goals.protein;
@@ -1696,9 +1713,21 @@
     });
 
     // TDEE & Goals listeners
+    function saveTdeeProfileFromInputs() {
+      state.tdeeProfile = {
+        sex: document.getElementById('tdeeSex').value,
+        age: Number(document.getElementById('tdeeAge').value) || 35,
+        height: Number(document.getElementById('tdeeHeight').value) || 178,
+        weight: Number(document.getElementById('tdeeWeight').value) || 74,
+        activity: document.getElementById('tdeeActivity').value,
+        goal: document.getElementById('tdeeGoal').value
+      };
+      saveState();
+      computeTdeePreview();
+    }
     ['tdeeSex', 'tdeeAge', 'tdeeHeight', 'tdeeWeight', 'tdeeActivity', 'tdeeGoal'].forEach(id => {
-      document.getElementById(id).addEventListener('input', computeTdeePreview);
-      document.getElementById(id).addEventListener('change', computeTdeePreview);
+      document.getElementById(id).addEventListener('input', saveTdeeProfileFromInputs);
+      document.getElementById(id).addEventListener('change', saveTdeeProfileFromInputs);
     });
 
     document.getElementById('applyTdeeBtn').addEventListener('click', () => {
