@@ -376,8 +376,12 @@
               <input type="number" id="tdeeHeight" value="173" min="120" max="230" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50" />
             </div>
             <div>
-              <label class="block text-xs font-semibold text-slate-600 mb-1">Weight (kg)</label>
-              <input type="number" id="tdeeWeight" value="74" min="35" max="220" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50" />
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Current Weight (kg)</label>
+              <input type="number" id="tdeeWeight" value="74" min="35" max="220" step="0.1" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Target Weight (kg)</label>
+              <input type="number" id="tdeeTargetWeight" value="70" min="35" max="220" step="0.1" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50" />
             </div>
           </div>
 
@@ -407,6 +411,7 @@
               <div class="text-xs font-semibold text-emerald-800">Estimated Daily Target</div>
               <div id="tdeePreviewVal" class="text-xl font-extrabold text-emerald-700 tabular-nums">— kcal</div>
               <div id="tdeeBmrNote" class="text-[11px] text-emerald-700/80">BMR: — kcal · Maintenance: — kcal</div>
+              <div id="tdeeTimelineNote" class="text-[11px] font-semibold text-emerald-800 mt-0.5"></div>
             </div>
             <button type="button" id="applyTdeeBtn" class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition shrink-0">
               Apply Target
@@ -841,6 +846,7 @@
         age: 35,
         height: 178,
         weight: 74,
+        targetWeight: 70,
         activity: '1.55',
         goal: '-500'
       },
@@ -1484,15 +1490,30 @@
       const age = Number(document.getElementById('tdeeAge').value) || 30;
       const h = Number(document.getElementById('tdeeHeight').value) || 170;
       const w = Number(document.getElementById('tdeeWeight').value) || 70;
+      const tw = Number(document.getElementById('tdeeTargetWeight').value) || w;
       const act = Number(document.getElementById('tdeeActivity').value) || 1.55;
       const offset = Number(document.getElementById('tdeeGoal').value) || 0;
 
       const bmr = Math.round(10 * w + 6.25 * h - 5 * age + (sex === 'male' ? 5 : -161));
       const maintenance = Math.round(bmr * act);
       const target = Math.max(1200, maintenance + offset);
+      const actualOffset = target - maintenance;
+      const diffKg = Math.round((tw - w) * 10) / 10;
 
       document.getElementById('tdeePreviewVal').textContent = `${target} kcal`;
       document.getElementById('tdeeBmrNote').textContent = `BMR: ${bmr} kcal · Maintenance: ${maintenance} kcal`;
+
+      const tlEl = document.getElementById('tdeeTimelineNote');
+      if (Math.abs(diffKg) < 0.2) {
+        tlEl.textContent = `At target weight (${tw} kg)`;
+      } else if ((diffKg < 0 && actualOffset < 0) || (diffKg > 0 && actualOffset > 0)) {
+        const weeks = Math.max(1, Math.round((Math.abs(diffKg) * 7700) / (Math.abs(actualOffset) * 7)));
+        tlEl.textContent = `Est. ~${weeks} week${weeks === 1 ? '' : 's'} to reach ${tw} kg (${diffKg > 0 ? '+' : ''}${diffKg} kg)`;
+      } else if (diffKg < 0) {
+        tlEl.textContent = `Select Fat Loss / Mild Cut to go from ${w} kg → ${tw} kg`;
+      } else {
+        tlEl.textContent = `Select Lean Muscle Gain to go from ${w} kg → ${tw} kg`;
+      }
       return { target, weightKg: w };
     }
 
@@ -1502,6 +1523,7 @@
       document.getElementById('tdeeAge').value = tp.age;
       document.getElementById('tdeeHeight').value = tp.height;
       document.getElementById('tdeeWeight').value = tp.weight;
+      document.getElementById('tdeeTargetWeight').value = tp.targetWeight ?? tp.weight;
       document.getElementById('tdeeActivity').value = String(tp.activity);
       document.getElementById('tdeeGoal').value = String(tp.goal);
       document.getElementById('goalCaloriesInput').value = state.goals.calories;
@@ -1719,13 +1741,14 @@
         age: Number(document.getElementById('tdeeAge').value) || 35,
         height: Number(document.getElementById('tdeeHeight').value) || 178,
         weight: Number(document.getElementById('tdeeWeight').value) || 74,
+        targetWeight: Number(document.getElementById('tdeeTargetWeight').value) || 70,
         activity: document.getElementById('tdeeActivity').value,
         goal: document.getElementById('tdeeGoal').value
       };
       saveState();
       computeTdeePreview();
     }
-    ['tdeeSex', 'tdeeAge', 'tdeeHeight', 'tdeeWeight', 'tdeeActivity', 'tdeeGoal'].forEach(id => {
+    ['tdeeSex', 'tdeeAge', 'tdeeHeight', 'tdeeWeight', 'tdeeTargetWeight', 'tdeeActivity', 'tdeeGoal'].forEach(id => {
       document.getElementById(id).addEventListener('input', saveTdeeProfileFromInputs);
       document.getElementById(id).addEventListener('change', saveTdeeProfileFromInputs);
     });
