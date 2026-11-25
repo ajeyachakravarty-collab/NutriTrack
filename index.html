@@ -65,7 +65,6 @@
         <button type="button" data-tab="today" class="nav-tab px-3.5 py-1.5 rounded-lg text-sm font-semibold transition">Today</button>
         <button type="button" data-tab="database" class="nav-tab px-3.5 py-1.5 rounded-lg text-sm font-semibold transition">Food Database</button>
         <button type="button" data-tab="analytics" class="nav-tab px-3.5 py-1.5 rounded-lg text-sm font-semibold transition">Analytics</button>
-        <button type="button" data-tab="coach" class="nav-tab px-3.5 py-1.5 rounded-lg text-sm font-semibold transition">🤖 AI Coach</button>
         <button type="button" data-tab="goals" class="nav-tab px-3.5 py-1.5 rounded-lg text-sm font-semibold transition">Goals &amp; TDEE</button>
       </nav>
 
@@ -90,13 +89,12 @@
       <button type="button" data-tab="today" class="nav-tab flex-1 py-1.5 rounded-lg text-xs font-semibold text-center transition">Today</button>
       <button type="button" data-tab="database" class="nav-tab flex-1 py-1.5 rounded-lg text-xs font-semibold text-center transition">Foods</button>
       <button type="button" data-tab="analytics" class="nav-tab flex-1 py-1.5 rounded-lg text-xs font-semibold text-center transition">Analytics</button>
-      <button type="button" data-tab="coach" class="nav-tab flex-1 py-1.5 rounded-lg text-xs font-semibold text-center transition">AI Coach</button>
       <button type="button" data-tab="goals" class="nav-tab flex-1 py-1.5 rounded-lg text-xs font-semibold text-center transition">Goals</button>
     </div>
   </header>
 
   <!-- Main Content -->
-  <main class="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-6 space-y-6">
+  <main class="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 pt-6 pb-28 space-y-6">
 
     <!-- ==================== TAB 1: TODAY ==================== -->
     <section id="tab-today" class="space-y-6">
@@ -314,6 +312,24 @@
         </div>
       </div>
 
+      <!-- Weight Log -->
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+        <div class="flex flex-wrap items-end justify-between gap-3 mb-3">
+          <div>
+            <h2 class="text-base font-bold text-slate-900">Weight Log</h2>
+            <p id="weightSummary" class="text-xs text-slate-500"></p>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-[11px] text-slate-500 tabular-nums">for <span id="weightDateLabel"></span></span>
+            <input type="number" id="weightInput" step="0.1" min="20" max="300" inputmode="decimal" placeholder="kg"
+              class="w-20 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+            <button type="button" id="weightSaveBtn" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition">Save</button>
+            <button type="button" id="weightDeleteBtn" class="hidden px-2.5 py-1.5 rounded-lg border border-rose-200 text-rose-600 text-xs font-semibold hover:bg-rose-50 transition">Remove</button>
+          </div>
+        </div>
+        <div class="relative h-56"><canvas id="weightChart"></canvas></div>
+      </div>
+
       <!-- Meal Distribution Breakdown -->
       <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
         <h2 id="analyticsMealTitle" class="text-base font-bold text-slate-900 mb-3">Meal-by-Meal Breakdown</h2>
@@ -322,27 +338,30 @@
     </section>
 
         <!-- ==================== TAB: AI COACH ==================== -->
-    <section id="tab-coach" class="hidden space-y-5">
-      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col" style="min-height: 480px;">
+    <div id="coachPanel" class="hidden fixed z-40 inset-x-3 bottom-24 sm:inset-x-auto sm:right-5 sm:bottom-24 sm:w-[390px]" role="dialog" aria-label="NutriTrack AI Coach">
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-2xl overflow-hidden flex flex-col h-[70vh] max-h-[560px]">
         <div class="px-5 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-2 bg-slate-50/70">
           <div class="flex items-center gap-2.5">
-            <span class="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center text-lg">🤖</span>
+            <span class="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20.5l1.4-4.6A8 8 0 1 1 21 12z"/><path d="M12 8.2l.9 2.2 2.2.9-2.2.9-.9 2.2-.9-2.2-2.2-.9 2.2-.9z" fill="currentColor" stroke="none"/></svg></span>
             <div>
               <h2 class="text-base font-bold text-slate-900">NutriTrack AI Coach</h2>
               <p id="coachModeBadge" class="text-xs text-slate-500">Analyzes your logged meals, macros, water &amp; workouts</p>
             </div>
           </div>
-          <button type="button" id="coachClearBtn" class="text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-white transition">Clear Chat</button>
+          <div class="flex items-center gap-1.5">
+            <button type="button" id="coachClearBtn" class="text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-white transition">Clear Chat</button>
+            <button type="button" id="coachCloseBtn" aria-label="Close AI Coach" class="w-8 h-8 rounded-lg text-slate-500 hover:bg-slate-200 text-lg leading-none transition">×</button>
+          </div>
         </div>
 
-        <div class="px-5 py-2.5 border-b border-slate-100 flex flex-wrap gap-2 bg-white">
-          <button type="button" data-coach-prompt="Analyze my day so far" class="text-xs font-semibold px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition">📊 Analyze my day</button>
-          <button type="button" data-coach-prompt="Suggest a high-protein meal for my remaining calories" class="text-xs font-semibold px-3 py-1.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition">🍗 High-protein ideas</button>
-          <button type="button" data-coach-prompt="How is my 7-day calorie consistency?" class="text-xs font-semibold px-3 py-1.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition">📈 7-day check-in</button>
-          <button type="button" data-coach-prompt="Give me quick tips to hit my goals today" class="text-xs font-semibold px-3 py-1.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200 transition">💡 Today's tips</button>
+        <div class="px-4 py-2.5 border-b border-slate-100 flex gap-2 bg-white overflow-x-auto shrink-0">
+          <button type="button" data-coach-prompt="Analyze my day so far" class="whitespace-nowrap text-xs font-semibold px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition">📊 Analyze my day</button>
+          <button type="button" data-coach-prompt="Suggest a high-protein meal for my remaining calories" class="whitespace-nowrap text-xs font-semibold px-3 py-1.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition">🍗 High-protein ideas</button>
+          <button type="button" data-coach-prompt="How is my 7-day calorie consistency?" class="whitespace-nowrap text-xs font-semibold px-3 py-1.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition">📈 7-day check-in</button>
+          <button type="button" data-coach-prompt="Give me quick tips to hit my goals today" class="whitespace-nowrap text-xs font-semibold px-3 py-1.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200 transition">💡 Today's tips</button>
         </div>
 
-        <div id="coachMessages" class="flex-1 p-5 space-y-3 overflow-y-auto max-h-[420px] bg-slate-50/40"></div>
+        <div id="coachMessages" class="flex-1 min-h-0 p-4 space-y-3 overflow-y-auto bg-slate-50/40"></div>
 
         <form id="coachForm" class="p-3.5 border-t border-slate-100 bg-white flex gap-2">
           <input type="text" id="coachInput" placeholder="Ask about your calories, protein gap, or meal ideas..." required
@@ -350,7 +369,7 @@
           <button type="submit" id="coachSendBtn" class="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold transition shrink-0">Send</button>
         </form>
       </div>
-    </section>
+    </div>
 
     <!-- ==================== TAB 4: GOALS & TDEE ==================== -->
     <section id="tab-goals" class="hidden space-y-5">
@@ -467,7 +486,10 @@
           </form>
 
           <div class="pt-3 border-t border-slate-100 flex flex-wrap gap-2">
+            <p id="backupStatus" class="w-full text-xs text-slate-500"></p>
             <button type="button" id="exportDataBtn" class="px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition">Export JSON Backup</button>
+            <button type="button" id="importDataBtn" class="px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition">Import JSON Backup</button>
+            <input type="file" id="importDataInput" accept="application/json,.json" class="hidden" />
             <button type="button" id="resetAllDataBtn" class="px-3 py-1.5 rounded-xl border border-rose-200 text-xs font-semibold text-rose-600 hover:bg-rose-50 transition">Reset All Saved Data</button>
           </div>
         </div>
@@ -751,7 +773,8 @@
   </div>
 
   <!-- Toast Notification -->
-  <div id="toast" class="fixed bottom-5 right-5 z-50 hidden bg-slate-900 text-white text-xs font-semibold px-4 py-2.5 rounded-xl shadow-lg"></div>
+  <button type="button" id="coachFab" aria-label="Open AI Coach" aria-expanded="false" class="fixed z-40 right-4 bottom-5 sm:right-5 w-14 h-14 rounded-full bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-2xl shadow-lg shadow-emerald-900/25 flex items-center justify-center transition" style="margin-bottom: env(safe-area-inset-bottom, 0px);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="w-7 h-7" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20.5l1.4-4.6A8 8 0 1 1 21 12z"/><path d="M12 8.2l.9 2.2 2.2.9-2.2.9-.9 2.2-.9-2.2-2.2-.9 2.2-.9z" fill="currentColor" stroke="none"/></svg><span id="coachFabClose" class="hidden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" class="w-6 h-6" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></span></button>
+  <div id="toast" class="fixed bottom-24 right-4 sm:bottom-5 sm:right-24 z-50 hidden bg-slate-900 text-white text-xs font-semibold px-4 py-2.5 rounded-xl shadow-lg"></div>
 
   <script>
     // ==================== GROUNDED FOOD DATABASE ====================
@@ -835,6 +858,8 @@
     ];
 
     const STORAGE_KEY = 'nutritrack_v1';
+    const BACKUP_KEY = 'nutritrack_last_backup';
+    const NUDGE_KEY = 'nutritrack_backup_nudge';
 
     function getLocalDateStr(d = new Date()) {
       const y = d.getFullYear();
@@ -866,6 +891,7 @@
       logsByDate: {},
       waterByDate: {},
       workoutsByDate: {},
+      weightByDate: {},
       customFoods: []
     };
 
@@ -901,6 +927,7 @@
           logsByDate: state.logsByDate,
           waterByDate: state.waterByDate,
           workoutsByDate: state.workoutsByDate,
+          weightByDate: state.weightByDate,
           customFoods: state.customFoods
         }));
       } catch (e) {
@@ -908,12 +935,12 @@
       }
     }
 
-    function showToast(msg) {
+    function showToast(msg, ms = 2400) {
       const el = document.getElementById('toast');
       el.textContent = msg;
       el.classList.remove('hidden');
       clearTimeout(window.__toastTimer);
-      window.__toastTimer = setTimeout(() => el.classList.add('hidden'), 2400);
+      window.__toastTimer = setTimeout(() => el.classList.add('hidden'), ms);
     }
 
     function openConfirm(title, message, onConfirm) {
@@ -974,7 +1001,7 @@
     // ==================== NAVIGATION ====================
     function switchTab(tabName) {
       state.activeTab = tabName;
-      ['today', 'database', 'analytics', 'coach', 'goals'].forEach(t => {
+      ['today', 'database', 'analytics', 'goals'].forEach(t => {
         document.getElementById(`tab-${t}`).classList.toggle('hidden', t !== tabName);
       });
       document.querySelectorAll('.nav-tab').forEach(btn => {
@@ -992,7 +1019,6 @@
         analyticsDate = state.selectedDate;
         renderAnalytics();
       }
-      if (tabName === 'coach') renderCoachMessages();
       if (tabName === 'goals') syncGoalsUI();
     }
 
@@ -1266,16 +1292,47 @@
     function renderModalFoodResults() {
       const q = document.getElementById('modalSearchInput').value.trim().toLowerCase();
       const all = getAllFoods();
-      const filtered = q ? all.filter(f => f.name.toLowerCase().includes(q) || f.category.toLowerCase().includes(q)) : all.slice(0, 18);
       const container = document.getElementById('modalFoodResults');
 
-      if (filtered.length === 0) {
+      // Frequent foods (last 60 days) + copy-yesterday shortcut, shown only when not searching
+      let favs = [];
+      let copyBar = '';
+      if (!q) {
+        const counts = {};
+        const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 60);
+        const cutoffStr = getLocalDateStr(cutoff);
+        Object.keys(state.logsByDate || {}).forEach(ds => {
+          if (ds < cutoffStr) return;
+          Object.values(state.logsByDate[ds] || {}).forEach(arr => (arr || []).forEach(it => {
+            if (!it.foodId) return;
+            const c = counts[it.foodId] || (counts[it.foodId] = { n: 0, last: '' });
+            c.n++; if (ds > c.last) c.last = ds;
+          }));
+        });
+        favs = Object.keys(counts)
+          .map(id => ({ food: all.find(f => f.id === id), ...counts[id] }))
+          .filter(x => x.food)
+          .sort((a, b) => b.n - a.n || (a.last < b.last ? 1 : -1))
+          .slice(0, 8).map(x => x.food);
+        const prev = new Date(state.selectedDate + 'T00:00:00'); prev.setDate(prev.getDate() - 1);
+        const prevItems = ((state.logsByDate[getLocalDateStr(prev)] || {})[modalCurrentMeal]) || [];
+        if (prevItems.length) {
+          const kcal = Math.round(prevItems.reduce((a, it) => a + (Number(it.calories) || 0), 0));
+          const mlabel = (MEAL_META.find(m => m.key === modalCurrentMeal) || {}).label || 'meal';
+          copyBar = `<button type="button" id="copyYesterdayBtn" class="w-full text-left px-3 py-2.5 rounded-xl border border-dashed border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-xs font-semibold text-emerald-800 transition">📋 Copy yesterday's ${escapeHtml(mlabel)} (${prevItems.length} item${prevItems.length === 1 ? '' : 's'}, ${kcal} kcal)</button>`;
+        }
+      }
+      const favIds = new Set(favs.map(f => f.id));
+      const base = q ? all.filter(f => f.name.toLowerCase().includes(q) || f.category.toLowerCase().includes(q)) : all.filter(f => !favIds.has(f.id)).slice(0, 18);
+      const filtered = base;
+
+      if (filtered.length === 0 && favs.length === 0) {
         container.innerHTML = `<div class="text-center py-8 text-xs text-slate-500">No matching foods found. Try creating a <button type="button" id="inlineCustomSwitch" class="text-emerald-600 font-semibold underline">custom food</button>.</div>`;
         document.getElementById('inlineCustomSwitch').addEventListener('click', () => switchModalTab('custom'));
         return;
       }
 
-      container.innerHTML = filtered.map(f => `
+      const rowHtml = (f) => `
         <div class="flex flex-wrap sm:flex-nowrap items-center justify-between gap-2 p-3 rounded-xl border border-slate-200 hover:border-emerald-300 bg-white transition">
           <div class="min-w-0 flex-1">
             <div class="font-semibold text-sm text-slate-800 flex items-center gap-1.5">
@@ -1295,7 +1352,13 @@
             <button type="button" data-log-food="${f.id}" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition">Add</button>
           </div>
         </div>
-      `).join('');
+      `;
+      const hdr = (t) => `<div class="pt-1 text-[11px] font-bold uppercase tracking-wider text-slate-400">${t}</div>`;
+      container.innerHTML = copyBar
+        + (favs.length ? hdr('⭐ Your go-to foods') + favs.map(rowHtml).join('') + (filtered.length ? hdr('All foods') : '') : '')
+        + filtered.map(rowHtml).join('');
+      const cyb = document.getElementById('copyYesterdayBtn');
+      if (cyb) cyb.addEventListener('click', () => copyPreviousDayMeal(modalCurrentMeal));
 
       container.querySelectorAll('[data-log-food]').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -1506,6 +1569,7 @@
       });
 
       renderAnalyticsDayDetails(analyticsDate);
+      renderWeightLog();
     }
 
     // ==================== GOALS & TDEE ====================
@@ -1680,6 +1744,7 @@
     document.getElementById('modalMealSelect').addEventListener('change', (e) => {
       modalCurrentMeal = e.target.value;
       updateModalMealLabel();
+      renderModalFoodResults();
     });
     document.getElementById('modalSearchInput').addEventListener('input', renderModalFoodResults);
 
@@ -1806,14 +1871,65 @@
     });
 
     document.getElementById('exportDataBtn').addEventListener('click', () => {
-      const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+      const backup = {
+        goals: state.goals,
+        tdeeProfile: state.tdeeProfile,
+        logsByDate: state.logsByDate,
+        waterByDate: state.waterByDate,
+        workoutsByDate: state.workoutsByDate,
+        weightByDate: state.weightByDate,
+        customFoods: state.customFoods
+      };
+      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
       a.download = `nutritrack-backup-${getLocalDateStr()}.json`;
       a.click();
       URL.revokeObjectURL(url);
+      try { localStorage.setItem(BACKUP_KEY, getLocalDateStr()); } catch (err) {}
+      renderBackupStatus();
       showToast('Backup downloaded');
+    });
+
+    document.getElementById('importDataBtn').addEventListener('click', () => {
+      document.getElementById('importDataInput').click();
+    });
+
+    document.getElementById('importDataInput').addEventListener('change', (e) => {
+      const file = e.target.files && e.target.files[0];
+      e.target.value = '';
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onerror = () => showToast('Could not read that file');
+      reader.onload = () => {
+        let data;
+        try { data = JSON.parse(reader.result); } catch (err) { showToast('Invalid backup: not valid JSON'); return; }
+        const isObj = (v) => v && typeof v === 'object' && !Array.isArray(v);
+        if (!isObj(data) || (!isObj(data.logsByDate) && !isObj(data.goals) && !Array.isArray(data.customFoods))) {
+          showToast('Invalid backup: NutriTrack data not found');
+          return;
+        }
+        const logs = Object.keys(data.logsByDate || {}).length;
+        openConfirm('Import Backup', `This replaces your current data with the backup (${logs} logged day${logs === 1 ? '' : 's'}, ${(data.customFoods || []).length} custom foods). Export a backup first if unsure.`, () => {
+          state = {
+            ...state,
+            goals: { ...defaultState.goals, ...(isObj(data.goals) ? data.goals : {}) },
+            tdeeProfile: { ...defaultState.tdeeProfile, ...(isObj(data.tdeeProfile) ? data.tdeeProfile : {}) },
+            logsByDate: isObj(data.logsByDate) ? data.logsByDate : {},
+            waterByDate: isObj(data.waterByDate) ? data.waterByDate : {},
+            workoutsByDate: isObj(data.workoutsByDate) ? data.workoutsByDate : {},
+            weightByDate: isObj(data.weightByDate) ? data.weightByDate : {},
+            customFoods: Array.isArray(data.customFoods) ? data.customFoods : []
+          };
+          saveState();
+          syncGoalsUI();
+          renderToday();
+          closeConfirm();
+          showToast('Backup restored');
+        });
+      };
+      reader.readAsText(file);
     });
 
     document.getElementById('resetAllDataBtn').addEventListener('click', () => {
@@ -2733,9 +2849,127 @@
       document.getElementById('budgetHelpBox').classList.toggle('hidden');
     });
 
+    // ==================== BACKUP REMINDER ====================
+    function daysSinceBackup() {
+      let last = null;
+      try { last = localStorage.getItem(BACKUP_KEY); } catch (e) {}
+      if (!last) return null;
+      const diff = Math.round((new Date(getLocalDateStr() + 'T00:00:00') - new Date(last + 'T00:00:00')) / 86400000);
+      return Number.isFinite(diff) ? Math.max(0, diff) : null;
+    }
+    function renderBackupStatus() {
+      const el = document.getElementById('backupStatus');
+      if (!el) return;
+      const d = daysSinceBackup();
+      const stale = d === null || d >= 7;
+      el.className = 'w-full text-xs font-semibold ' + (stale ? 'text-amber-600' : 'text-slate-500');
+      el.textContent = d === null ? 'Last backup: never. Your data lives only in this browser.'
+        : d === 0 ? 'Last backup: today' : `Last backup: ${d} day${d === 1 ? '' : 's'} ago`;
+    }
+    function maybeNudgeBackup() {
+      if (Object.keys(state.logsByDate || {}).length === 0) return;
+      const d = daysSinceBackup();
+      if (d !== null && d < 7) return;
+      let nudged = null;
+      try { nudged = localStorage.getItem(NUDGE_KEY); } catch (e) {}
+      if (nudged === getLocalDateStr()) return;
+      try { localStorage.setItem(NUDGE_KEY, getLocalDateStr()); } catch (e) {}
+      setTimeout(() => showToast(d === null ? 'No backup yet. Goals → Export JSON Backup.' : `Last backup ${d} days ago. Goals → Export JSON Backup.`, 6500), 1200);
+    }
+
+    // ==================== COPY YESTERDAY'S MEAL ====================
+    function copyPreviousDayMeal(mealKey) {
+      const prev = new Date(state.selectedDate + 'T00:00:00');
+      prev.setDate(prev.getDate() - 1);
+      const items = ((state.logsByDate[getLocalDateStr(prev)] || {})[mealKey]) || [];
+      if (!items.length) { showToast('Nothing logged for this meal yesterday'); return; }
+      const dayLog = ensureDateLog(state.selectedDate);
+      items.forEach(it => dayLog[mealKey].push({ ...it, id: 'log_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7) }));
+      saveState();
+      renderToday();
+      if (state.activeTab === 'analytics') renderAnalytics();
+      closeFoodModal();
+      showToast(`Copied ${items.length} item${items.length === 1 ? '' : 's'} from yesterday`);
+    }
+
+    // ==================== WEIGHT LOG ====================
+    let weightChartInstance = null;
+    function renderWeightLog() {
+      const wMap = state.weightByDate || {};
+      const dates = Object.keys(wMap).sort();
+      const input = document.getElementById('weightInput');
+      const dateLbl = document.getElementById('weightDateLabel');
+      if (dateLbl) dateLbl.textContent = state.selectedDate;
+      if (input && document.activeElement !== input) input.value = wMap[state.selectedDate] ?? '';
+      document.getElementById('weightDeleteBtn').classList.toggle('hidden', wMap[state.selectedDate] === undefined);
+
+      const sum = document.getElementById('weightSummary');
+      const target = Number(state.tdeeProfile?.targetWeight);
+      if (dates.length === 0) {
+        sum.textContent = 'No weigh-ins yet. Log your weight to see your trend vs target.';
+      } else {
+        const latest = wMap[dates[dates.length - 1]];
+        const first = wMap[dates[0]];
+        const parts = [`Latest ${latest} kg`];
+        if (dates.length > 1) { const ch = Math.round((latest - first) * 10) / 10; parts.push(`${ch > 0 ? '+' : ''}${ch} kg since ${dates[0]}`); }
+        if (Number.isFinite(target) && target > 0) { const gap = Math.round((latest - target) * 10) / 10; parts.push(gap === 0 ? 'at target' : `${Math.abs(gap)} kg ${gap > 0 ? 'above' : 'below'} target`); }
+        sum.textContent = parts.join(' · ');
+      }
+
+      const canvas = document.getElementById('weightChart');
+      if (!canvas || typeof Chart === 'undefined') return;
+      if (weightChartInstance) weightChartInstance.destroy();
+      const shown = dates.slice(-30);
+      const datasets = [{ label: 'Weight (kg)', data: shown.map(d => wMap[d]), borderColor: '#059669', backgroundColor: '#05966933', tension: 0.3, pointRadius: 3, fill: true }];
+      if (Number.isFinite(target) && target > 0 && shown.length) {
+        datasets.push({ label: 'Target', data: shown.map(() => target), borderColor: '#94a3b8', borderDash: [6, 4], pointRadius: 0, fill: false });
+      }
+      weightChartInstance = new Chart(canvas.getContext('2d'), {
+        type: 'line',
+        data: { labels: shown.map(d => d.slice(5)), datasets },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } }, scales: { y: { beginAtZero: false } } }
+      });
+    }
+    document.getElementById('weightSaveBtn').addEventListener('click', () => {
+      const v = Math.round(Number(document.getElementById('weightInput').value) * 10) / 10;
+      if (!Number.isFinite(v) || v < 20 || v > 300) { showToast('Enter a weight between 20 and 300 kg'); return; }
+      if (!state.weightByDate) state.weightByDate = {};
+      state.weightByDate[state.selectedDate] = v;
+      saveState();
+      renderWeightLog();
+      showToast(`Weight saved: ${v} kg`);
+    });
+    document.getElementById('weightDeleteBtn').addEventListener('click', () => {
+      if (state.weightByDate) delete state.weightByDate[state.selectedDate];
+      saveState();
+      renderWeightLog();
+      showToast('Weigh-in removed');
+    });
+
+    // ==================== FLOATING AI COACH ====================
+    function setCoachOpen(open) {
+      const panel = document.getElementById('coachPanel');
+      const fab = document.getElementById('coachFab');
+      panel.classList.toggle('hidden', !open);
+      fab.firstElementChild.classList.toggle('hidden', open);
+      document.getElementById('coachFabClose').classList.toggle('hidden', !open);
+      fab.setAttribute('aria-expanded', String(open));
+      fab.setAttribute('aria-label', open ? 'Close AI Coach' : 'Open AI Coach');
+      if (open) renderCoachMessages();
+    }
+    document.getElementById('coachFab').addEventListener('click', () => {
+      setCoachOpen(document.getElementById('coachPanel').classList.contains('hidden'));
+    });
+    document.getElementById('coachCloseBtn').addEventListener('click', () => setCoachOpen(false));
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !document.getElementById('coachPanel').classList.contains('hidden')) setCoachOpen(false);
+    });
+
     // Init
     switchTab('today');
     renderToday();
+    renderBackupStatus();
+    maybeNudgeBackup();
   </script>
 </body>
 </html>
