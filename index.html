@@ -901,6 +901,86 @@
     let macroChartInstance = null;
     let pendingConfirmAction = null;
 
+    // ==================== DATA SANITIZER ====================
+    // Single gatekeeper for anything coming from localStorage or an imported backup.
+    function sanitizeState(raw) {
+      const isObj = (v) => v && typeof v === 'object' && !Array.isArray(v);
+      const num = (v, d = 0) => { const n = Number(v); return (v !== null && v !== '' && Number.isFinite(n)) ? n : d; };
+      const posNum = (v, d) => { const n = num(v, d); return n > 0 ? n : d; };
+      const str = (v, d = '') => (typeof v === 'string' ? v : (v === null || v === undefined ? d : String(v)));
+      const src = isObj(raw) ? raw : {};
+      const def = JSON.parse(JSON.stringify(defaultState));
+      const uid = (pfx) => pfx + '_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+
+      const g = isObj(src.goals) ? src.goals : {};
+      const goals = {
+        calories: posNum(g.calories, def.goals.calories),
+        protein: posNum(g.protein, def.goals.protein),
+        carbs: posNum(g.carbs, def.goals.carbs),
+        fat: posNum(g.fat, def.goals.fat),
+        waterGlasses: posNum(g.waterGlasses, def.goals.waterGlasses),
+        includeExerciseInRemaining: typeof g.includeExerciseInRemaining === 'boolean' ? g.includeExerciseInRemaining : def.goals.includeExerciseInRemaining
+      };
+
+      const t = isObj(src.tdeeProfile) ? src.tdeeProfile : {};
+      const tdeeProfile = {
+        sex: t.sex === 'female' ? 'female' : 'male',
+        age: posNum(t.age, def.tdeeProfile.age),
+        height: posNum(t.height, def.tdeeProfile.height),
+        weight: posNum(t.weight, def.tdeeProfile.weight),
+        targetWeight: posNum(t.targetWeight, def.tdeeProfile.targetWeight),
+        activity: str(t.activity, def.tdeeProfile.activity) || def.tdeeProfile.activity,
+        goal: str(t.goal, def.tdeeProfile.goal) || def.tdeeProfile.goal
+      };
+
+      const mealKeys = ['breakfast', 'morning_snack', 'lunch', 'evening_snack', 'dinner'];
+      const logsByDate = {};
+      if (isObj(src.logsByDate)) {
+        Object.keys(src.logsByDate).forEach(d => {
+          if (!isObj(src.logsByDate[d])) return;
+          const day = {};
+          mealKeys.forEach(k => {
+            const arr = Array.isArray(src.logsByDate[d][k]) ? src.logsByDate[d][k] : [];
+            day[k] = arr.filter(isObj).map(it => ({
+              ...it,
+              id: str(it.id) || uid('log'),
+              foodId: str(it.foodId),
+              name: str(it.name, 'Food') || 'Food',
+              servingLabel: str(it.servingLabel, '1 serving'),
+              servings: posNum(it.servings, 1),
+              calories: num(it.calories), protein: num(it.protein), carbs: num(it.carbs), fat: num(it.fat)
+            }));
+          });
+          logsByDate[d] = day;
+        });
+      }
+
+      const waterByDate = {};
+      if (isObj(src.waterByDate)) Object.keys(src.waterByDate).forEach(d => { const n = num(src.waterByDate[d], -1); if (n >= 0) waterByDate[d] = Math.floor(n); });
+
+      const workoutsByDate = {};
+      if (isObj(src.workoutsByDate)) {
+        Object.keys(src.workoutsByDate).forEach(d => {
+          if (!Array.isArray(src.workoutsByDate[d])) return;
+          workoutsByDate[d] = src.workoutsByDate[d].filter(isObj).map(w => ({
+            ...w, id: str(w.id) || uid('wk'), name: str(w.name, 'Workout') || 'Workout',
+            minutes: num(w.minutes), caloriesBurned: num(w.caloriesBurned)
+          }));
+        });
+      }
+
+      const weightByDate = {};
+      if (isObj(src.weightByDate)) Object.keys(src.weightByDate).forEach(d => { const n = num(src.weightByDate[d], 0); if (n >= 20 && n <= 300) weightByDate[d] = n; });
+
+      const customFoods = (Array.isArray(src.customFoods) ? src.customFoods : []).filter(f => isObj(f) && str(f.name).trim()).map(f => ({
+        ...f, id: str(f.id) || uid('cf'), name: str(f.name), category: str(f.category, 'Custom') || 'Custom',
+        serving: str(f.serving, '1 serving'), emoji: str(f.emoji, '🥗') || '🥗',
+        kcal: num(f.kcal), p: num(f.p), c: num(f.c), f: num(f.f)
+      }));
+
+      return { goals, tdeeProfile, logsByDate, waterByDate, workoutsByDate, weightByDate, customFoods };
+    }
+
     function loadState() {
       try {
         const raw = localStorage.getItem(STORAGE_KEY);
@@ -908,9 +988,7 @@
         const parsed = JSON.parse(raw);
         return {
           ...JSON.parse(JSON.stringify(defaultState)),
-          ...parsed,
-          goals: { ...defaultState.goals, ...(parsed.goals || {}) },
-          tdeeProfile: { ...defaultState.tdeeProfile, ...(parsed.tdeeProfile || {}) },
+          ...sanitizeState(parsed),
           activeTab: 'today',
           selectedDate: getLocalDateStr()
         };
@@ -1156,7 +1234,7 @@
         } else {
           itemsHtml = `<div class="divide-y divide-slate-100">` + items.map(item => `
             <div class="px-5 py-3 flex flex-wrap sm:flex-nowrap items-center justify-between gap-3 hover:bg-slate-50/70 transition">
-              <div class="min-w-0 flex-1">
+              <div class="min-w-0 basis-full sm:basis-0 sm:flex-1">
                 <div class="font-semibold text-sm text-slate-800 break-words leading-snug">${escapeHtml(item.name)}</div>
                 <div class="text-xs text-slate-500 mt-0.5">${item.servings} × ${escapeHtml(item.servingLabel)} ·
                   <span class="text-indigo-600 font-medium">P ${item.protein}g</span> ·
@@ -1164,13 +1242,13 @@
                   <span class="text-rose-600 font-medium">F ${item.fat}g</span>
                 </div>
               </div>
-              <div class="flex items-center gap-2 shrink-0">
+              <div class="flex items-center gap-2 shrink-0 w-full sm:w-auto justify-between sm:justify-end">
                 <div class="flex items-center border border-slate-200 rounded-lg bg-white overflow-hidden">
                   <button type="button" data-step="-0.5" data-meal="${meal.key}" data-id="${item.id}" class="px-2 py-1 text-xs font-bold text-slate-600 hover:bg-slate-100">-</button>
                   <span class="px-2 text-xs font-semibold text-slate-700 tabular-nums">${item.servings}x</span>
                   <button type="button" data-step="0.5" data-meal="${meal.key}" data-id="${item.id}" class="px-2 py-1 text-xs font-bold text-slate-600 hover:bg-slate-100">+</button>
                 </div>
-                <span class="text-sm font-bold text-slate-800 w-16 text-right tabular-nums">${Math.round(item.calories)} kcal</span>
+                <span class="text-sm font-bold text-slate-800 sm:w-16 text-right tabular-nums whitespace-nowrap ml-auto sm:ml-0">${Math.round(item.calories)} kcal</span>
                 <button type="button" data-edit-meal="${meal.key}" data-edit-id="${item.id}" aria-label="Edit item" class="p-1.5 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/></svg>
                 </button>
@@ -1184,16 +1262,16 @@
 
         card.innerHTML = `
           <div class="px-5 py-3.5 bg-slate-50/70 border-b border-slate-100 flex items-center justify-between gap-3">
-            <div class="flex items-center gap-2.5">
+            <div class="flex items-center gap-2.5 min-w-0">
               <span class="text-xl">${meal.icon}</span>
               <div>
                 <h3 class="font-bold text-sm text-slate-900">${meal.label}</h3>
                 ${items.length > 0 ? `<p class="text-[11px] text-slate-500">P ${mealP}g · C ${mealC}g · F ${mealF}g</p>` : ''}
               </div>
             </div>
-            <div class="flex items-center gap-3">
-              <span class="text-sm font-bold text-slate-700 tabular-nums">${mealKcal} kcal</span>
-              <button type="button" data-add-meal="${meal.key}" class="px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold border border-emerald-200 transition">
+            <div class="flex items-center gap-3 shrink-0">
+              <span class="text-sm font-bold text-slate-700 tabular-nums whitespace-nowrap">${mealKcal} kcal</span>
+              <button type="button" data-add-meal="${meal.key}" class="whitespace-nowrap px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold border border-emerald-200 transition">
                 + Add Food
               </button>
             </div>
@@ -1912,16 +1990,7 @@
         }
         const logs = Object.keys(data.logsByDate || {}).length;
         openConfirm('Import Backup', `This replaces your current data with the backup (${logs} logged day${logs === 1 ? '' : 's'}, ${(data.customFoods || []).length} custom foods). Export a backup first if unsure.`, () => {
-          state = {
-            ...state,
-            goals: { ...defaultState.goals, ...(isObj(data.goals) ? data.goals : {}) },
-            tdeeProfile: { ...defaultState.tdeeProfile, ...(isObj(data.tdeeProfile) ? data.tdeeProfile : {}) },
-            logsByDate: isObj(data.logsByDate) ? data.logsByDate : {},
-            waterByDate: isObj(data.waterByDate) ? data.waterByDate : {},
-            workoutsByDate: isObj(data.workoutsByDate) ? data.workoutsByDate : {},
-            weightByDate: isObj(data.weightByDate) ? data.weightByDate : {},
-            customFoods: Array.isArray(data.customFoods) ? data.customFoods : []
-          };
+          state = { ...state, ...sanitizeState(data) };
           saveState();
           syncGoalsUI();
           renderToday();
