@@ -974,7 +974,7 @@
 
       const customFoods = (Array.isArray(src.customFoods) ? src.customFoods : []).filter(f => isObj(f) && str(f.name).trim()).map(f => ({
         ...f, id: str(f.id) || uid('cf'), name: str(f.name), category: str(f.category, 'Custom') || 'Custom',
-        serving: str(f.serving, '1 serving'), emoji: str(f.emoji, '🥗') || '🥗',
+        serving: str(f.serving, '1 serving'), emoji: Array.from(str(f.emoji).replace(/[<>&"'`]/g, '')).slice(0, 4).join('') || '🥗',
         kcal: num(f.kcal), p: num(f.p), c: num(f.c), f: num(f.f)
       }));
 
@@ -1261,13 +1261,10 @@
         }
 
         card.innerHTML = `
-          <div class="px-5 py-3.5 bg-slate-50/70 border-b border-slate-100 flex items-center justify-between gap-3">
+          <div class="px-5 py-3.5 bg-slate-50/70 border-b border-slate-100 flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
             <div class="flex items-center gap-2.5 min-w-0">
               <span class="text-xl">${meal.icon}</span>
-              <div>
-                <h3 class="font-bold text-sm text-slate-900">${meal.label}</h3>
-                ${items.length > 0 ? `<p class="text-[11px] text-slate-500">P ${mealP}g · C ${mealC}g · F ${mealF}g</p>` : ''}
-              </div>
+              <h3 class="font-bold text-sm text-slate-900 whitespace-nowrap">${meal.label}</h3>
             </div>
             <div class="flex items-center gap-3 shrink-0">
               <span class="text-sm font-bold text-slate-700 tabular-nums whitespace-nowrap">${mealKcal} kcal</span>
@@ -1275,6 +1272,7 @@
                 + Add Food
               </button>
             </div>
+            ${items.length > 0 ? `<p class="basis-full text-[11px] text-slate-500 tabular-nums pl-9">P ${mealP}g · C ${mealC}g · F ${mealF}g</p>` : ''}
           </div>
           ${itemsHtml}
         `;
@@ -1414,7 +1412,7 @@
         <div class="flex flex-wrap sm:flex-nowrap items-center justify-between gap-2 p-3 rounded-xl border border-slate-200 hover:border-emerald-300 bg-white transition">
           <div class="min-w-0 flex-1">
             <div class="font-semibold text-sm text-slate-800 flex items-center gap-1.5">
-              <span>${f.emoji || '🍽️'}</span>
+              <span>${escapeHtml(f.emoji || '🍽️')}</span>
               <span class="truncate">${escapeHtml(f.name)}</span>
             </div>
             <div class="text-xs text-slate-500">${escapeHtml(f.serving)} · <strong class="text-slate-700">${f.kcal} kcal</strong> (P ${f.p}g · C ${f.c}g · F ${f.f}g)</div>
@@ -1489,7 +1487,7 @@
         <div class="p-4 rounded-xl border border-slate-200 bg-slate-50/50 flex flex-col justify-between gap-3">
           <div>
             <div class="flex items-start justify-between gap-2">
-              <div class="font-bold text-sm text-slate-900">${f.emoji || '🍽️'} ${escapeHtml(f.name)}</div>
+              <div class="font-bold text-sm text-slate-900">${escapeHtml(f.emoji || '🍽️')} ${escapeHtml(f.name)}</div>
               <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white border border-slate-200 text-slate-500 shrink-0">${escapeHtml(f.category)}</span>
             </div>
             <div class="text-xs text-slate-500 mt-1">${escapeHtml(f.serving)}</div>
